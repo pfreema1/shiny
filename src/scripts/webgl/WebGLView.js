@@ -14,6 +14,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { BloomPass } from 'three/examples/jsm/postprocessing/BloomPass.js';
 import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass.js';
 import { debounce } from '../utils/debounce';
+import Swarm from '../Swarm';
 
 export default class WebGLView {
   constructor(app) {
@@ -30,13 +31,18 @@ export default class WebGLView {
     this.initBgScene();
     this.initLights();
     this.initTweakPane();
-    await this.loadTestMesh();
+    // await this.loadTestMesh();
+    this.setupSwarm();
     this.setupTextCanvas();
     this.initMouseMoveListen();
     this.initMouseCanvas();
     this.initRenderTri();
     this.initPostProcessing();
     this.initResizeHandler();
+  }
+
+  setupSwarm() {
+    this.swarm = new Swarm(this.bgScene);
   }
 
   initResizeHandler() {
@@ -81,22 +87,22 @@ export default class WebGLView {
 
     this.composer.addPass(new RenderPass(this.scene, this.camera));
 
-    const bloomPass = new BloomPass(
-      1, // strength
-      25, // kernel size
-      4, // sigma ?
-      256 // blur render target resolution
-    );
-    this.composer.addPass(bloomPass);
+    // const bloomPass = new BloomPass(
+    //   1, // strength
+    //   25, // kernel size
+    //   4, // sigma ?
+    //   256 // blur render target resolution
+    // );
+    // this.composer.addPass(bloomPass);
 
-    const filmPass = new FilmPass(
-      0.35, // noise intensity
-      0.025, // scanline intensity
-      648, // scanline count
-      false // grayscale
-    );
-    filmPass.renderToScreen = true;
-    this.composer.addPass(filmPass);
+    // const filmPass = new FilmPass(
+    //   0.35, // noise intensity
+    //   0.025, // scanline intensity
+    //   648, // scanline count
+    //   false // grayscale
+    // );
+    // filmPass.renderToScreen = true;
+    // this.composer.addPass(filmPass);
   }
 
   initTweakPane() {
@@ -151,6 +157,8 @@ export default class WebGLView {
         console.log(this.testMesh);
         this.testMesh.add(new THREE.AxesHelper());
 
+        this.testMesh.geometry.computeVertexNormals();
+
         this.testMeshMaterial = new THREE.ShaderMaterial({
           fragmentShader: glslify(baseDiffuseFrag),
           vertexShader: glslify(basicDiffuseVert),
@@ -167,7 +175,7 @@ export default class WebGLView {
           }
         });
 
-        this.testMesh.material = this.testMeshMaterial;
+        this.testMesh.material = new THREE.MeshStandardMaterial(); //this.testMeshMaterial;
         this.testMesh.material.needsUpdate = true;
 
         this.bgScene.add(this.testMesh);
@@ -208,9 +216,13 @@ export default class WebGLView {
   }
 
   initLights() {
-    this.pointLight = new THREE.PointLight(0xff0000, 1, 100);
+    this.pointLight = new THREE.PointLight(0xaaaaaa, 1, 100);
     this.pointLight.position.set(0, 0, 50);
+
+    this.ambientLight = new THREE.AmbientLight(0xbcbcbc, 1.1);
+
     this.bgScene.add(this.pointLight);
+    this.bgScene.add(this.ambientLight);
   }
 
   resize() {
@@ -253,6 +265,10 @@ export default class WebGLView {
 
     if (this.testMesh) {
       this.updateTestMesh(time);
+    }
+
+    if (this.swarm) {
+      this.swarm.update(time);
     }
 
     if (this.mouseCanvas) {
